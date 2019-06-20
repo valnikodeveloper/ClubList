@@ -8,13 +8,6 @@
 
 import UIKit
 
-//Clubs data
-struct ClubListData {
-    var name:String! = ""
-    var descriptionOfClub:String! = ""
-    var id:String! = ""
-}
-
 class ClubListTVC: UITableViewController,ClubListModelDelegate {
     
     var clublList:[ClubListData] = []
@@ -57,7 +50,7 @@ class ClubListTVC: UITableViewController,ClubListModelDelegate {
     }
     
     func insertNewRowInView(newName: String, clubId: String) {
-        let club = ClubListData(name: newName, descriptionOfClub: "", id: clubId)
+        let club = ClubListData(name: newName, description: "", id: clubId)
         tableView.beginUpdates()
         clublList.append(club)
         tableView.insertRows(at: [IndexPath(row: clublList.count - 1, section: 0)], with: .automatic)
@@ -85,7 +78,7 @@ class ClubListTVC: UITableViewController,ClubListModelDelegate {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let decrVC = DescriptionVC()
-        decrVC.withIdStrURL = idStrUrl + clublList[indexPath.row].id
+        decrVC.withIdStrURL = idStrUrl + clublList[indexPath.row].id!
         decrVC.clubListModel = clubListModel
         clubListModel.delegate = decrVC
         clubListModel.requestInfoFromSite(urlStr: decrVC.withIdStrURL, isDetailRequest: true)
