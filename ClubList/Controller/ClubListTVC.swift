@@ -14,15 +14,16 @@ class ClubListTVC: UITableViewController,ClubListModelDelegate {
     var clubListModel:ClubListModel!
     let strForUrl = "http://megakohz.bget.ru/test.php"
     let idStrUrl = "http://megakohz.bget.ru/test.php?id="
+    private var waitingSpinner:UIActivityIndicatorView = UIActivityIndicatorView(style: .gray)
     
     @objc func refresh() {
+        waitingSpinner.startAnimating()
         clublList.removeAll()
         tableView.reloadData()
         clubListModel.requestInfoFromSite(urlStr: strForUrl, isDetailRequest: false)
-        
     }
     
-    func setupNavBarItemRefresh() {
+    private func setupNavBarItemRefresh() {
         let refreshItem = UIBarButtonItem(title: "Refresh", style: UIBarButtonItem.Style.plain, target: self, action: #selector(refresh))
         refreshItem.tintColor = .blue
         self.navigationItem.rightBarButtonItem = refreshItem
@@ -38,14 +39,25 @@ class ClubListTVC: UITableViewController,ClubListModelDelegate {
         let ok = UIAlertAction(title: "OK", style: .destructive , handler: nil)
         alert.addAction(ok)
         self.present(alert,animated:true,completion:nil)
+        waitingSpinner.stopAnimating()
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.register(CellOfClub.self, forCellReuseIdentifier: "cellClubId")
         clubListModel = ClubListModel()
+        let titleLabel =  UIStackView()
+        titleLabel.alignment = .center
+        titleLabel.axis = .horizontal
+        titleLabel.spacing = 3
+        let label = UILabel()
+        label.text = "ClubList"
+        titleLabel.addArrangedSubview(label)
+        titleLabel.addArrangedSubview(waitingSpinner)
+        titleLabel.addSubview(waitingSpinner)
+        navigationItem.titleView = titleLabel
+        waitingSpinner.startAnimating()
         clubListModel.requestInfoFromSite(urlStr: strForUrl, isDetailRequest: false)
-        navigationItem.title = "ClubList"
         setupNavBarItemRefresh()
     }
     
@@ -55,6 +67,7 @@ class ClubListTVC: UITableViewController,ClubListModelDelegate {
         clublList.append(club)
         tableView.insertRows(at: [IndexPath(row: clublList.count - 1, section: 0)], with: .automatic)
         tableView.endUpdates()
+        waitingSpinner.stopAnimating()
     }
 
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -72,6 +85,7 @@ class ClubListTVC: UITableViewController,ClubListModelDelegate {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cellClubId", for: indexPath)
         if indexPath.row < clublList.count {
             cell.textLabel?.text = clublList[indexPath.row].name
+            cell.accessoryType = .disclosureIndicator
         }
         return cell
     }

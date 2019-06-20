@@ -15,7 +15,6 @@ struct ClubListData:Decodable {
     var id:String?
 }
 
-
 class ClubListModel: NSObject {
     
     weak var delegate:ClubListModelDelegate?
@@ -42,7 +41,6 @@ class ClubListModel: NSObject {
             do {
                 let jsonResponse = try JSONDecoder().decode([ClubListData].self, from: data)
                 for club in (jsonResponse) {
-                    
                     var clubId = club.id
                     if clubId  == nil {
                         clubId  = "nil"
@@ -70,7 +68,7 @@ class ClubListModel: NSObject {
                 }
             }catch let error {
                 DispatchQueue.main.async { [weak self] in
-                    self?.delegate?.displayError(error: "Получены некорректные данные с сервера.\n====\nПодробности: \(error)")
+                    self?.delegate?.displayError(error: "Неудалось разобрать данные с сервера.\n====\nПодробности: \(error)")
                 }
             }
         }.resume()

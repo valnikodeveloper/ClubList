@@ -10,33 +10,35 @@ import UIKit
 
 class DescriptionVC: UIViewController,ClubListModelDelegate {
 
-    var titleLabel = UILabel()
-    var descrLabel = UILabel()
+    private var titleLabel = UILabel()
+    private var descrLabel = UILabel()
+    private var scrollView = UIScrollView()
     var refreshItem = UIBarButtonItem()
     var clubListModel:ClubListModel!
     var withIdStrURL:String = ""
+    private var waitingSpinner:UIActivityIndicatorView = UIActivityIndicatorView(style: .gray)
     
     func displayError(error:String) {
         let alert = UIAlertController(title: "Ошибка!", message: error, preferredStyle: .alert)
         let ok = UIAlertAction(title: "OK", style: .destructive , handler: nil)
         alert.addAction(ok)
         self.present(alert,animated:true,completion:nil)
+        waitingSpinner.stopAnimating()
     }
-    
-    private var scrollView = UIScrollView()
     
     private func setupNavBarItemRefresh() {
         refreshItem = UIBarButtonItem(title: "Refresh", style: UIBarButtonItem.Style.plain, target: self, action: #selector(refreshVC))
         refreshItem.tintColor = .blue
         self.navigationItem.rightBarButtonItem = refreshItem
+        navigationItem.titleView = waitingSpinner
     }
     
     @objc func refreshVC() {
+        waitingSpinner.startAnimating()
         titleLabel.text = ""
         descrLabel.text = ""
         clubListModel.requestInfoFromSite(urlStr: withIdStrURL, isDetailRequest: true)
     }
-    
 
     private func setupConstraints() {
         titleLabel.topAnchor.constraint(equalTo: view.topAnchor,constant:70).isActive = true
@@ -53,9 +55,9 @@ class DescriptionVC: UIViewController,ClubListModelDelegate {
     }
     
     func createFullDescr(newName: String, clubDescr: String) {
-        
         titleLabel.text = newName
         descrLabel.text = clubDescr
+        waitingSpinner.stopAnimating()
     }
 
     override func viewDidLoad() {
@@ -79,6 +81,7 @@ class DescriptionVC: UIViewController,ClubListModelDelegate {
         view.addSubview(scrollView)
         setupConstraints()
         setupNavBarItemRefresh()
+        waitingSpinner.startAnimating()
     }
 
 
