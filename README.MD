@@ -3,7 +3,7 @@ Test task:
 2. In case of row selection :  get data from the server by using id of company (club) and show details in another view.
 
 Technical notes:
-1. CallBacks using for data passing in MVC.
-2. Decoder is using for JSON data parsing.
+1. CallBacks are used for data passing in MVC.
+2. Decoder is used for JSON data parsing.
 
 Version 1.2.1
