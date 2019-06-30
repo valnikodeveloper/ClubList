@@ -15,71 +15,55 @@ struct ClubListData:Decodable {
     var id:String?
 }
 
+struct CustomError {
+    var descrition = ""
+}
+
 class ClubListModel: NSObject {
-    
-    weak var delegate:ClubListModelDelegate?
-    
-    func requestInfoFromSite(urlStr:String, isDetailRequest:Bool) {
+
+    func requestInfoFromSite(urlStr:String,clubDataRelCallBack:@escaping (ClubListData?,CustomError?) ->()) {
         let url = URL(string:urlStr)
         var request = URLRequest(url: url!)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        URLSession.shared.dataTask(with: url!) { [weak self] (data, response, error) in
-            
+        
+        URLSession.shared.dataTask(with: url!) { (data, response, error) in
             if let err = error {
-                DispatchQueue.main.async { [weak self] in
-                    self?.delegate?.displayError(error: err.localizedDescription)
+                DispatchQueue.main.async {
+                    clubDataRelCallBack(nil,CustomError(descrition: err.localizedDescription))
                 }
                 return
             }
             guard let data = data else {
-                DispatchQueue.main.async { [weak self] in
-                    self?.delegate?.displayError(error: "Не удалось получить данные с сервера.\n")
+                DispatchQueue.main.async {
+                    clubDataRelCallBack(nil,CustomError(descrition: "Не удалось получить данные с сервера"))
                 }
                 return
             }
             do {
                 let jsonResponse = try JSONDecoder().decode([ClubListData].self, from: data)
                 for club in (jsonResponse) {
-                    var clubId = club.id
-                    if clubId  == nil {
-                        clubId  = "nil"
+                    var clubData = ClubListData()
+                    
+                    clubData.id = club.id
+                    if clubData.id == nil {
+                        clubData.id = "nil"
                     }
-                    var name = club.name
-                    if name == nil {
-                        name = "NO NAME"
+                    clubData.name = club.name
+                    if club.name == nil {
+                        clubData.name = "NO NAME"
                     }
-                    if isDetailRequest == false {
-                        DispatchQueue.main.async { [weak self] in
-                            self?.delegate?.insertNewRowInView?(newName: name!, clubId: clubId!)
-                        }
-                    } else {
-                        var description = club.description
-                        if description == nil {
-                            description = "NO DESRIPTION"
-                        }
-                        
-                        DispatchQueue.main.async { [weak self] in
-                            //Send data to view
-                            self?.delegate?.createFullDescr?(newName: name!, clubDescr: description!)
-                        }
+                    //No need to check here.Should be checked in description controller
+                    clubData.description = club.description
+                    DispatchQueue.main.async {
+                        clubDataRelCallBack(clubData, nil)
                     }
-
                 }
             }catch let error {
-                DispatchQueue.main.async { [weak self] in
-                    self?.delegate?.displayError(error: "Неудалось разобрать данные с сервера.\n====\nПодробности: \(error)")
+                DispatchQueue.main.async {
+                    clubDataRelCallBack(nil,CustomError(descrition: "Неудалось разобрать данные с сервера.\n====\nПодробности: \(error.localizedDescription)") )
                 }
             }
         }.resume()
     }
-    
-    
-
-}
-
-@objc protocol ClubListModelDelegate:class {
-    @objc optional func insertNewRowInView(newName: String, clubId: String)
-    @objc optional func createFullDescr(newName: String, clubDescr: String)
-    @objc func displayError(error: String)
 }

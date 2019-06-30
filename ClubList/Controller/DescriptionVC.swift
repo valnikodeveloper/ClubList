@@ -8,36 +8,47 @@
 
 import UIKit
 
-class DescriptionVC: UIViewController,ClubListModelDelegate {
+class DescriptionVC: UIViewController {
 
     private var titleLabel = UILabel()
     private var descrLabel = UILabel()
+    private var refreshItem = UIBarButtonItem()
     private var scrollView = UIScrollView()
-    var refreshItem = UIBarButtonItem()
     var clubListModel:ClubListModel!
     var withIdStrURL:String = ""
-    private var waitingSpinner:UIActivityIndicatorView = UIActivityIndicatorView(style: .gray)
-    
+
     func displayError(error:String) {
         let alert = UIAlertController(title: "Ошибка!", message: error, preferredStyle: .alert)
         let ok = UIAlertAction(title: "OK", style: .destructive , handler: nil)
         alert.addAction(ok)
         self.present(alert,animated:true,completion:nil)
-        waitingSpinner.stopAnimating()
     }
-    
+
     private func setupNavBarItemRefresh() {
         refreshItem = UIBarButtonItem(title: "Refresh", style: UIBarButtonItem.Style.plain, target: self, action: #selector(refreshVC))
         refreshItem.tintColor = .blue
         self.navigationItem.rightBarButtonItem = refreshItem
-        navigationItem.titleView = waitingSpinner
     }
-    
+
+    func performRequestWithUrl(urlStr:String) {
+        clubListModel.requestInfoFromSite(urlStr: urlStr, clubDataRelCallBack: { [weak self] clubListData,error in
+                if let anError = error {
+                        self?.displayError(error:anError.descrition)
+                    return
+                }
+                self?.titleLabel.text = clubListData!.name
+                if let descr =  clubListData?.description {
+                    self?.descrLabel.text = descr
+                }else {
+                    self?.descrLabel.text = "NO DESCRIPTION"
+                }
+        })
+    }
+
     @objc func refreshVC() {
-        waitingSpinner.startAnimating()
         titleLabel.text = ""
         descrLabel.text = ""
-        clubListModel.requestInfoFromSite(urlStr: withIdStrURL, isDetailRequest: true)
+        performRequestWithUrl(urlStr:withIdStrURL)
     }
 
     private func setupConstraints() {
@@ -53,11 +64,10 @@ class DescriptionVC: UIViewController,ClubListModelDelegate {
         descrLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor,constant: 0).isActive = true
         descrLabel.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor).isActive = true
     }
-    
+
     func createFullDescr(newName: String, clubDescr: String) {
         titleLabel.text = newName
         descrLabel.text = clubDescr
-        waitingSpinner.stopAnimating()
     }
 
     override func viewDidLoad() {
@@ -81,9 +91,8 @@ class DescriptionVC: UIViewController,ClubListModelDelegate {
         view.addSubview(scrollView)
         setupConstraints()
         setupNavBarItemRefresh()
-        waitingSpinner.startAnimating()
+        performRequestWithUrl(urlStr: withIdStrURL)
     }
-
 
 }
 
