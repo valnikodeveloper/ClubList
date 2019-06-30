@@ -21,7 +21,7 @@ struct CustomError {
 
 class ClubListModel: NSObject {
 
-    func requestInfoFromSite(urlStr:String,clubDataRelCallBack:@escaping (ClubListData?,CustomError?) ->()) {
+    func requestInfoFromSite(urlStr:String,clubDataRelCallBack:@escaping (ClubListData?,CustomError?,Int?) ->()) {
         let url = URL(string:urlStr)
         var request = URLRequest(url: url!)
         request.httpMethod = "GET"
@@ -30,21 +30,20 @@ class ClubListModel: NSObject {
         URLSession.shared.dataTask(with: url!) { (data, response, error) in
             if let err = error {
                 DispatchQueue.main.async {
-                    clubDataRelCallBack(nil,CustomError(descrition: err.localizedDescription))
+                    clubDataRelCallBack(nil,CustomError(descrition: err.localizedDescription),nil)
                 }
                 return
             }
             guard let data = data else {
                 DispatchQueue.main.async {
-                    clubDataRelCallBack(nil,CustomError(descrition: "Не удалось получить данные с сервера"))
+                    clubDataRelCallBack(nil,CustomError(descrition: "Не удалось получить данные с сервера"),nil)
                 }
                 return
             }
             do {
                 let jsonResponse = try JSONDecoder().decode([ClubListData].self, from: data)
-                for club in (jsonResponse) {
+                for club in jsonResponse {
                     var clubData = ClubListData()
-                    
                     clubData.id = club.id
                     if clubData.id == nil {
                         clubData.id = "nil"
@@ -56,12 +55,12 @@ class ClubListModel: NSObject {
                     //No need to check here.Should be checked in description controller
                     clubData.description = club.description
                     DispatchQueue.main.async {
-                        clubDataRelCallBack(clubData, nil)
+                        clubDataRelCallBack(clubData,nil,jsonResponse.count)
                     }
                 }
             }catch let error {
                 DispatchQueue.main.async {
-                    clubDataRelCallBack(nil,CustomError(descrition: "Неудалось разобрать данные с сервера.\n====\nПодробности: \(error.localizedDescription)") )
+                    clubDataRelCallBack(nil,CustomError(descrition: "Неудалось разобрать данные с сервера.\n====\nПодробности: \(error.localizedDescription)"),nil)
                 }
             }
         }.resume()

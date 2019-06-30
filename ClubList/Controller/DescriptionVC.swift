@@ -14,34 +14,40 @@ class DescriptionVC: UIViewController {
     private var descrLabel = UILabel()
     private var refreshItem = UIBarButtonItem()
     private var scrollView = UIScrollView()
+    private var activityIndicator:UIActivityIndicatorView = UIActivityIndicatorView(style: .whiteLarge)
     var clubListModel:ClubListModel!
     var withIdStrURL:String = ""
 
     func displayError(error:String) {
         let alert = UIAlertController(title: "Ошибка!", message: error, preferredStyle: .alert)
-        let ok = UIAlertAction(title: "OK", style: .destructive , handler: nil)
+        let ok = UIAlertAction(title: "OK", style: .destructive , handler: {[weak self] _ in
+           self?.endRefresh()
+        })
         alert.addAction(ok)
         self.present(alert,animated:true,completion:nil)
     }
 
-    private func setupNavBarItemRefresh() {
-        refreshItem = UIBarButtonItem(title: "Refresh", style: UIBarButtonItem.Style.plain, target: self, action: #selector(refreshVC))
-        refreshItem.tintColor = .blue
-        self.navigationItem.rightBarButtonItem = refreshItem
+    func endRefresh() {
+        if scrollView.refreshControl!.isRefreshing {
+            scrollView.refreshControl?.endRefreshing()
+        }else {
+            activityIndicator.stopAnimating()
+        }
     }
 
     func performRequestWithUrl(urlStr:String) {
-        clubListModel.requestInfoFromSite(urlStr: urlStr, clubDataRelCallBack: { [weak self] clubListData,error in
+        clubListModel.requestInfoFromSite(urlStr: urlStr, clubDataRelCallBack: { [weak self] clubListData,error,_ in
                 if let anError = error {
                         self?.displayError(error:anError.descrition)
                     return
                 }
-                self?.titleLabel.text = clubListData!.name
+                self?.titleLabel.text = clubListData?.name
                 if let descr =  clubListData?.description {
                     self?.descrLabel.text = descr
                 }else {
                     self?.descrLabel.text = "NO DESCRIPTION"
                 }
+                self?.endRefresh()
         })
     }
 
@@ -65,9 +71,24 @@ class DescriptionVC: UIViewController {
         descrLabel.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor).isActive = true
     }
 
+    func setupRefreshBehavior () {
+        scrollView.refreshControl = UIRefreshControl()
+        scrollView.refreshControl?.tintColor = .white
+        scrollView.refreshControl?.addTarget(self, action:
+            #selector(refreshVC),for: .valueChanged)
+    }
+    
     func createFullDescr(newName: String, clubDescr: String) {
         titleLabel.text = newName
         descrLabel.text = clubDescr
+    }
+    
+    func setupActivityLoading() {
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        activityIndicator.startAnimating()
+        scrollView.addSubview(activityIndicator)
+        activityIndicator.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor,constant: 0).isActive = true
+        activityIndicator.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor,constant: 0).isActive = true
     }
 
     override func viewDidLoad() {
@@ -90,9 +111,9 @@ class DescriptionVC: UIViewController {
         scrollView.addSubview(descrLabel)
         view.addSubview(scrollView)
         setupConstraints()
-        setupNavBarItemRefresh()
+        setupRefreshBehavior()
         performRequestWithUrl(urlStr: withIdStrURL)
+        setupActivityLoading()
     }
-
 }
 

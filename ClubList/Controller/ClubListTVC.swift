@@ -14,69 +14,100 @@ class ClubListTVC: UITableViewController {
     private var clubListModel:ClubListModel!
     private let strForUrl = "http://megakohz.bget.ru/test.php"
     private let idStrUrl = "http://megakohz.bget.ru/test.php?id="
-    private var waitingSpinner:UIActivityIndicatorView = UIActivityIndicatorView(style: .gray)
-
-    @objc func refresh() {
-        waitingSpinner.startAnimating()
-        clublList.removeAll()
-        performRequestWithUrl(urlStr: strForUrl)
-        tableView.reloadData()
-    }
-
     private func performRequestWithUrl(urlStr:String) {
-        clubListModel.requestInfoFromSite(urlStr: urlStr, clubDataRelCallBack: { [weak self] clubData , error in
+        clubListModel.requestInfoFromSite(urlStr: urlStr, clubDataRelCallBack: { [weak self] clubData , error, jsonCount in
             if let anError = error  {
                     self?.displayError(error: anError.descrition)
                 return
             }
-            self?.insertNewRowInView(newName: clubData!.name!, clubId: clubData!.id!)
+            self?.insertNewRowInView(newName: clubData!.name!, clubId: clubData!.id!,count:jsonCount!)
         })
-    }
-
-    private func setupNavBarItemRefresh() {
-        let refreshItem = UIBarButtonItem(title: "Refresh", style: UIBarButtonItem.Style.plain, target: self, action: #selector(refresh))
-        refreshItem.tintColor = .blue
-        self.navigationItem.rightBarButtonItem = refreshItem
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
     }
+    
+    func endRefresh() {
+        if refreshControl!.isRefreshing {
+            refreshControl?.endRefreshing()
+            refreshControl?.attributedTitle = NSAttributedString(string: "", attributes: [NSAttributedString.Key.font:UIFont.systemFont(ofSize: UIFont.systemFontSize)])
+        }else {
+            tableView.backgroundView = nil
+        }
+    }
 
     func displayError(error:String) {
             let alert = UIAlertController(title: "Ошибка!", message: error, preferredStyle: .alert)
-            let ok = UIAlertAction(title: "OK", style: .destructive , handler: nil)
+            let ok = UIAlertAction(title: "OK", style: .destructive , handler: { [weak self] _ in
+                self?.endRefresh()
+            })
             alert.addAction(ok)
-            waitingSpinner.stopAnimating()
             present(alert,animated:true,completion:nil)
     }
 
+    func setupBackgroundLoading() {
+        
+        var navBarHeigh:CGFloat = 44
+        
+        if let height = navigationController?.navigationBar.frame.height {
+            navBarHeigh = height
+        }
+        
+        let stack = UIStackView(frame: view.frame)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 10
+        tableView.tableFooterView = UIView()
+        tableView.backgroundView = stack
+        let loadLabel = UILabel()
+        loadLabel.text = "Loading..."
+        loadLabel.sizeToFit()
+        let activity = UIActivityIndicatorView(style: .gray)
+        activity.startAnimating()
+        stack.addArrangedSubview(loadLabel)
+        stack.addArrangedSubview(activity)
+        stack.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        stack.centerYAnchor.constraint(equalTo: view.centerYAnchor,constant: -navBarHeigh).isActive = true
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupBackgroundLoading()
+        setupRefreshBehavior()
+        view.backgroundColor = .lightGray
         tableView.register(CellOfClub.self, forCellReuseIdentifier: "cellClubId")
         clubListModel = ClubListModel()
-        let titleLabel =  UIStackView()
-        titleLabel.alignment = .center
-        titleLabel.axis = .horizontal
-        titleLabel.spacing = 3
         let label = UILabel()
         label.text = "ClubList"
-        titleLabel.addArrangedSubview(label)
-        titleLabel.addArrangedSubview(waitingSpinner)
-        titleLabel.addSubview(waitingSpinner)
-        navigationItem.titleView = titleLabel
-        waitingSpinner.startAnimating()
+        navigationItem.titleView = label
         performRequestWithUrl(urlStr: strForUrl)
-        setupNavBarItemRefresh()
     }
 
-    func insertNewRowInView(newName: String, clubId: String) {
+    func setupRefreshBehavior () {
+        refreshControl = UIRefreshControl()
+        refreshControl?.attributedTitle =  NSAttributedString(string: "", attributes: [NSAttributedString.Key.font:UIFont.systemFont(ofSize: UIFont.systemFontSize)])
+        refreshControl?.addTarget(self, action:
+            #selector(updating),for: .valueChanged)
+    }
+    
+    @objc func updating() {
+        refreshControl?.attributedTitle =  NSAttributedString(string: "Updating", attributes: [NSAttributedString.Key.font:UIFont.systemFont(ofSize: UIFont.systemFontSize)])
+        clublList.removeAll()
+        tableView.reloadSections(IndexSet(arrayLiteral: 0), with: .none)
+        performRequestWithUrl(urlStr: strForUrl)
+    }
+
+    func insertNewRowInView(newName: String, clubId: String,count:Int) {
         let club = ClubListData(name: newName, description: nil, id: clubId)
         tableView.beginUpdates()
         clublList.append(club)
         tableView.insertRows(at: [IndexPath(row: clublList.count - 1, section: 0)], with: .automatic)
         tableView.endUpdates()
-        waitingSpinner.stopAnimating()
+        if count == tableView.numberOfRows(inSection: 0) {
+            endRefresh()
+        }
     }
 
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -92,6 +123,9 @@ class ClubListTVC: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cellClubId", for: indexPath)
         if indexPath.row < clublList.count {
+            if  tableView.backgroundView != nil {
+                tableView.backgroundView = nil
+            }
             cell.textLabel?.text = clublList[indexPath.row].name
             cell.accessoryType = .disclosureIndicator
         }
